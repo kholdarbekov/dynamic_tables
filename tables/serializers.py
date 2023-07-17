@@ -1,4 +1,4 @@
-from django.db import OperationalError, ProgrammingError, models
+from django.db import DatabaseError, models
 from rest_framework import serializers
 
 from .models import DynamicModel, DynamicModelField
@@ -18,36 +18,31 @@ class ModelFieldSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
+        data["options"] = data.get("options", {})
         if data["type"] == "string":
-            max_length_attr = data.get("options", {}).get("max_length", -1)
-            if max_length_attr < 0:
-                raise serializers.ValidationError(
-                    "String field must have positive max_length attr"
-                )
             try:
-                if data.get("options"):
-                    models.CharField(**data.get("options"))
+                # No need to check max_length option for CharField.
+                # in Django 4.2 unlimited VARCHAR is introduced for PostgreSQL
+                # https://docs.djangoproject.com/en/4.2/ref/models/fields/#django.db.models.CharField.max_length
+                models.CharField(**data.get("options"))
             except TypeError as exc:
                 raise serializers.ValidationError(str(exc))
 
         if data["type"] == "int":
             try:
-                if data.get("options"):
-                    models.IntegerField(**data.get("options"))
+                models.IntegerField(**data.get("options"))
             except TypeError as exc:
                 raise serializers.ValidationError(str(exc))
 
         if data["type"] == "float":
             try:
-                if data.get("options"):
-                    models.FloatField(**data.get("options"))
+                models.FloatField(**data.get("options"))
             except TypeError as exc:
                 raise serializers.ValidationError(str(exc))
 
         if data["type"] == "float":
             try:
-                if data.get("options"):
-                    models.BooleanField(**data.get("options"))
+                models.BooleanField(**data.get("options"))
             except TypeError as exc:
                 raise serializers.ValidationError(str(exc))
 
@@ -68,12 +63,12 @@ class DynamicModelSerializer(serializers.ModelSerializer):
             name=validated_data["name"],
             fields=fields,
             options=validated_data.get("options"),
-            admin_opts=validated_data.get("admin_opts"),
+            admin_opts=validated_data.get("admin_opts") or {},
         )
 
         try:
             create_model_db(new_model)
-        except (OperationalError, ProgrammingError) as exc:
+        except DatabaseError as exc:
             raise serializers.ValidationError(str(exc))
 
         fields_list = []
@@ -96,6 +91,6 @@ class DynamicModelSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         try:
             update_model(instance, validated_data)
-        except (OperationalError, ProgrammingError) as exc:
+        except DatabaseError as exc:
             raise serializers.ValidationError(str(exc))
         return instance

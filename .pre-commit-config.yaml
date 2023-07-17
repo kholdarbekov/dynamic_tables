@@ -13,7 +13,7 @@ repos:
     hooks:
       - id: tests
         name: run tests
-        entry: pytest
+        entry: sh -c pytest
         language: system
         types: [ python ]
         stages: [ push ]

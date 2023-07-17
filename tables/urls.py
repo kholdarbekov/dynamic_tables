@@ -2,14 +2,14 @@ from django.urls import path
 
 from .views import (
     AddRowsDynamicModelView,
-    CreateDynamicModelView,
+    CreateUpdateDynamicModelView,
     ListDynamicTableRowsView,
 )
 
 urlpatterns = [
     path(
         "table",
-        CreateDynamicModelView.as_view(
+        CreateUpdateDynamicModelView.as_view(
             http_method_names=[
                 "post",
             ]
@@ -18,7 +18,7 @@ urlpatterns = [
     ),
     path(
         "table/<int:id>",
-        CreateDynamicModelView.as_view(
+        CreateUpdateDynamicModelView.as_view(
             http_method_names=[
                 "put",
             ]
