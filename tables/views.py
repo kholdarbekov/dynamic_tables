@@ -1,5 +1,6 @@
 from rest_framework import generics, serializers, status
 from rest_framework.response import Response
+from django.core.exceptions import ObjectDoesNotExist
 
 from .models import DynamicModel
 from .serializers import DynamicModelSerializer

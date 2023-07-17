@@ -2,6 +2,8 @@ from typing import Union, Any
 from django.contrib import admin
 from django.db import connection, models
 from django.db.models.query import QuerySet
+from django.core.exceptions import ObjectDoesNotExist
+from rest_framework import serializers
 
 from .models import DynamicModel, DynamicModelField
 
@@ -94,7 +96,10 @@ def create_model(
         attrs.update(fields)
 
     # Create the class, which automatically triggers ModelBase processing
-    model = type(name, (models.Model,), attrs)
+    try:
+        model = type(name, (models.Model,), attrs)
+    except TypeError as exc:
+        raise serializers.ValidationError(str(exc))
 
     # Create an Admin class if admin options were provided
     if admin_opts is not None:
@@ -115,15 +120,21 @@ def get_model(model_id: int) -> tuple[Any, DynamicModel]:
     :param model_id:
     :return:
     """
-    model_object = DynamicModel.objects.get(id=model_id)
-    model_fields = prepare_fields(model_object.fields.all(), remove_extra_options=True)
+    try:
+        model_object = DynamicModel.objects.get(id=model_id)
+        model_fields = prepare_fields(
+            model_object.fields.all(), remove_extra_options=True
+        )
 
-    model = create_model(
-        name=model_object.name,
-        fields=model_fields,
-        options=model_object.options,
-        admin_opts=model_object.admin_opts,
-    )
+        model = create_model(
+            name=model_object.name,
+            fields=model_fields,
+            options=model_object.options,
+            admin_opts=model_object.admin_opts,
+        )
+    except ObjectDoesNotExist as exc:
+        # raise Validation here, this function is used in many places including view functions
+        raise serializers.ValidationError(str(exc))
 
     return model, model_object
 
